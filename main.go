@@ -1,16 +1,19 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"runtime"
-	"time"
-
 	"crypto/rand"
+	"github.com/binance-chain/go-sdk/common/types"
+
+	//"flag"
+	"fmt"
 	"math/big"
 
-	"github.com/binance-chain/go-sdk/common/types"
+	//"github.com/binance-chain/go-sdk/common/types"
 	"github.com/binance-chain/go-sdk/keys"
+)
+
+const (
+	defaultBIP39Passphrase = ""
 )
 
 func GenerateRandomString(n int) (string, error) {
@@ -27,20 +30,30 @@ func GenerateRandomString(n int) (string, error) {
 	return string(ret), nil
 }
 
-func GenAccount() (Result) {
-	privKey, _  := GenerateRandomString(64)
-	keyManager, _ := keys.NewPrivateKeyManager(privKey)
-	addr := keyManager.GetAddr().String()
+func GenAccount() Result {
+	//privKey, _  := GenerateRandomString(64)
+	//keyManager, _ := keys.NewPrivateKeyManager(privKey)
 
+	types.Network = types.ProdNetwork
+	mnemonic := "frost clock finger slender dwarf speak phone shoulder caution blossom tired nephew swift summer vast analyst potato kind maze venture very unfold pair turn"
+	//if err != nil {
+	//	return err
+	//}
+	bip44Params := keys.NewBinanceBIP44Params(0, 1)
+	fmt.Printf("🔍 Finding Address end with  on %s\n", bip44Params.String())
+	keyManager, _ := keys.NewMnemonicPathKeyManager(mnemonic, bip44Params.String())
+
+	privateKey, _ := keyManager.ExportAsPrivateKey()
+	addr := keyManager.GetAddr().String()
 	return Result{
-		privKey,
+		privateKey,
 		addr,
 	}
 }
 
 type Result struct {
 	privKey string
-	addr string
+	addr    string
 }
 
 var (
@@ -62,44 +75,34 @@ func Run(c chan Result, in string) {
 
 	c <- Result{
 		privKey: privKey,
-		addr: addr,
+		addr:    addr,
 	}
 }
 
 func main() {
 	// Flag
-	suffix := flag.String("s", "0", "Suffix to find")
-	network := flag.String("n", "mainnet", "Network mainnet or testnet")
-	flag.Parse()
-
+	suffix := "985"
+	network := "mainnet"
+	//flag.Parse()
 	// Network
-	if *network == "testnet" {
-		types.Network = types.TestNetwork
-	}
+	//if *network == "testnet" {
+	//	types.Network = types.TestNetwork
+	//}
 
 	// Loop
-	found := make(chan Result)
 
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Second):
-				fmt.Printf("🔥 Running at %d hash per second\n", count)
-				count = 0
-			}
-		}
-	}()
+	fmt.Printf("🔍 Finding Address end with %s on %s\n", suffix, network)
+	//for i := 0; i < runtime.NumCPU(); i++ {
+	//	//fmt.Printf("🌀 Running task no. %d \n", i+1)
+	//	go Run(found, suffix)
+	//}
 
-	fmt.Printf("🔍 Finding Address end with %s on %s\n", *suffix, *network)
-	for i := 0; i < runtime.NumCPU(); i++ {
-		fmt.Printf("🌀 Running task no. %d \n", i+1)
-		go Run(found, *suffix)
-	}
-	go Run(found, *suffix)
+	result := GenAccount()
+	//go Run(found, suffix)
 
 	// Found
-	result := <-found
-	
+	//result := <-found
+
 	fmt.Println("💎 ʕ•́ᴥ•̀ʔっ Got it! ")
 	fmt.Println("🔒 public address :", result.addr)
 	fmt.Println("🔑 private key    :", result.privKey)
